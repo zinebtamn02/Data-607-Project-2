@@ -1,0 +1,252 @@
+---
+title: "Project 2"
+author: "Zineb Tamnat"
+format: html
+editor: visual
+---
+
+``` r
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(readr)
+```
+
+## Dataset 1: CONMEBOL World Cup Qualification
+
+This dataset shows South American national teams competing in the World Cup qualifying tournament. The data includes standings statistics and a match results grid.
+
+``` r
+#Importing the data
+
+conmebol_raw <- read_csv("conmebol_wide.csv")
+
+head(conmebol_raw)
+dim(conmebol_raw)
+names(conmebol_raw)
+```
+
+``` r
+conmebol_tidy <- conmebol_raw |>
+  pivot_longer(
+    cols = -team,
+    names_to = "stat",
+    values_to = "value"
+  )
+
+head(conmebol_tidy)
+dim(conmebol_tidy)
+names(conmebol_tidy)
+```
+
+To tidy this dataset, I reshaped it from wide format to long format using `pivot_longer()`. In the tidy version each row represents one statistic for one team, with separate columns for team name, statistic type and value.
+
+## Analysis
+
+``` r
+conmebol_points <- conmebol_tidy |>
+  filter(stat == "pts")
+
+conmebol_points
+```
+
+``` r
+points_summary <- conmebol_points |>
+  arrange(desc(value))
+
+points_summary
+```
+
+Using the tidy dataset I filtered the rows where the statistic was `pts` (points). Points determine the ranking in the standings so this allows us to compare team performance directly.
+
+## Visualization
+
+``` r
+ggplot(points_summary, aes(x = reorder(team, value), y = value)) +
+  geom_col(fill = "darkred") +
+  coord_flip() +
+  labs(
+    title = "CONMEBOL World Cup Qualifying Points by Team",
+    x = "Team",
+    y = "Points"
+  )
+```
+
+This chart shows the number of qualifying points earned by each South American team. Argentina finished with the highest total at 38 points followed by Ecuador with 29 points. Several teams like Colombia, Uruguay, Brazil and Paraguay finished closely grouped with 28 points. This visualization highlights how competitive the middle of the standings was during the qualifying campaign.
+
+## Dataset 2 - NFL Player Statistics
+
+The second dataset I used in this project is the NFL Basic Stats dataset from Kaggle. It contains player level information such as age, birth place, birthday, college, current team, experience, height, weight, position, and years played. I selected this dataset because it is in a wide format, with one row per player and many columns containing player attributes. This makes it a good candidate for tidying and transformation.
+
+``` r
+#Importing the data
+
+nfl_raw <- read_csv("Basic_Stats.csv")
+
+head(nfl_raw)
+```
+
+``` r
+dim(nfl_raw)
+names(nfl_raw)
+head(nfl_raw)
+```
+
+To tidy this dataset, I first standardized the variable names by converting them to lowercase and replacing spaces and punctuation with simpler names. Then I reshaped the data from wide format to long format using `pivot_longer()`. This makes a tidy structure where each row contains one player, one attribute and one value. I also removed missing values so that blank fields don't mess with analysis.
+
+``` r
+nfl_clean <- nfl_raw |>
+  rename_with(tolower) |>
+  rename(
+    birth_place = `birth place`,
+    current_status = `current status`,
+    current_team = `current team`,
+    height_inches = `height (inches)`,
+    high_school = `high school`,
+    high_school_location = `high school location`,
+    player_id = `player id`,
+    weight_lbs = `weight (lbs)`,
+    years_played = `years played`
+  )
+
+nfl_tidy <- nfl_clean |>
+  pivot_longer(
+    cols = -name,
+    names_to = "attribute",
+    values_to = "value",
+    values_transform = list(value = as.character)
+  ) |>
+  drop_na(value)
+
+head(nfl_tidy)
+```
+
+After reshaping the dataset, the tidy version now has three main columns: the player name, the attribute being recorded and the value associated with that attribute.
+
+## Analysis
+
+``` r
+nfl_position <- nfl_tidy |>
+  filter(attribute == "position")
+
+head(nfl_position)
+
+position_summary <- nfl_position |>
+  count(value, sort = TRUE)
+
+position_summary
+```
+
+Using the tidy dataset, I filtered the rows where the attribute was "position" and then counted the number of players in each position. This provides a simple summary of how the players' roles are distributed in the dataset.
+
+## Visualization
+
+``` r
+ggplot(position_summary, aes(x = reorder(value, n), y = n)) +
+  geom_col(fill = "purple") +
+  coord_flip() +
+  labs(
+    title = "Number of NFL Players by Position",
+    x = "Position",
+    y = "Number of Players"
+  )
+```
+
+The chart shows the distribution of NFL player positions in the dataset. Wide receivers (WR) appear most frequently followed by defensive ends (DE) and cornerbacks (CB). This suggests that some positions require larger numbers of players or have greater turnover across teams which results in more players appearing in the dataset for those roles.
+
+## Conclusion
+
+Overall, transforming the dataset into tidy format made it easier to filter variables such as position and summarize the distribution of players across roles.
+
+## Dataset 3 - Gym Statistics
+
+The third dataset I used in this project is the Gym Members Exercise Dataset from Kaggle. This dataset contains information about gym members and their workout habits with variables such as age, workout type, workout duration, calories burned, heart rate and other fitness metrics.
+
+The dataset is structured in a wide format where each row represents one gym member and each column represents a different metric. Because many variables are stored across columns, the dataset can benefit from being reshaped into tidy long format so that each observation has a single variable and value.
+
+``` r
+#Importing the data
+
+gym_raw <- read_csv("gym_stats.csv")
+
+head(gym_raw)
+
+dim(gym_raw)
+names(gym_raw)
+```
+
+``` r
+#Cleaning up the column names
+
+gym_clean <- gym_raw |>
+  rename_with(tolower) |>
+  rename(
+    weight_kg = `weight (kg)`,
+    height_m = `height (m)`,
+    session_duration_hours = `session_duration (hours)`,
+    water_intake_liters = `water_intake (liters)`,
+    workout_frequency_days_week = `workout_frequency (days/week)`
+  )
+
+names(gym_clean)
+```
+
+``` r
+gym_clean <- gym_clean |>
+  mutate(member_id = row_number())
+
+gym_tidy <- gym_clean |>
+  pivot_longer(
+    cols = -member_id,
+    names_to = "metric",
+    values_to = "value",
+    values_transform = list(value = as.character)
+  )
+
+head(gym_tidy)
+dim(gym_tidy)
+names(gym_tidy)
+```
+
+To convert the dataset into tidy format I first created a unique identifier for each gym member using `row_number()`. I then used `pivot_longer()` to reshape the dataset from wide format to long format. This transformation creates a structure where each row represents a single metric and value for a specific gym member.
+
+``` r
+gym_workout_type <- gym_tidy |>
+  filter(metric == "workout_type")
+
+head(gym_workout_type)
+
+workout_summary <- gym_workout_type |>
+  count(value, sort = TRUE)
+
+workout_summary
+```
+
+Using the tidy dataset, I filtered the rows where the metric was `workout_type` and counted the number of members in each category. This gives a simple summary of the distribution of workout types in the dataset.
+
+## Visualization
+
+``` r
+ggplot(workout_summary, aes(x = reorder(value, n), y = n)) +
+  geom_col(fill = "pink") +
+  coord_flip() +
+  labs(
+    title = "Distribution of Workout Types",
+    x = "Workout Type",
+    y = "Number of Members"
+  )
+```
+
+The summary shows the distribution of workout types among gym members in the dataset. Strength training appears most frequently, followed closely by cardio and yoga workouts. HIIT appears slightly less often but all workout types are relatively evenly represented across the dataset.
+
+## Conclusion
+
+Converting the dataset from wide format to tidy format made it easier to filter specific metrics such as workout type and summarize patterns across gym members. Using the tidy structure allowed simple grouping and visualization of the distribution of workout activities.
+
+## Final Conclusion
+
+This project demonstrated how wide format datasets can be transformed into tidy datasets using the `tidyr` and `dplyr`packages in R. Each dataset initially contained multiple variables stored across columns which made analysis harder. By reshaping the datasets into long format using `pivot_longer()`, the data was reorganized so that each row represented a single observation with a clear variable and value.
+
+After tidying the datasets, it became much easier to perform analysis and create visualizations. For example, the NFL dataset allowed us to summarize the distribution of player positions, the gym dataset showed how workout types are distributed among members and the CONMEBOL dataset made it simple to compare team points in the World Cup qualifying standings.
+
+Overall, this project demonstartes the importance of tidying data before analysis. Transforming datasets into a consistent structure makes it easier to filter variables, summarize results and produce clear visualizations.
